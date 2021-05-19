@@ -1,0 +1,74 @@
+openapi: "3.0.0"
+info:
+  title: Storj Timebox API
+  version: "0.1"
+  description: "A 'Time-box' API that allows users to upload/download files. \n Uploaded files can have limits specifying an expiration date and a limit on how many times they can be downloaded."
+servers:
+  - url: http://localhost:1337/v1
+    description: "Base URL for local development"
+paths:
+  /file/{id}:
+    get:
+      summary: "Download a file"
+      description: "Download a single file by it's Id"
+      parameters:
+        - in: path
+          name: id
+          description: "Id of the file to download"
+          example: "b082723c-5c7a-4c37-b44d-027ff6ebc23a"
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        200:
+          description: "The file requested for download."
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: "File not found"
+        default:
+          description: "Unexpected Error"
+  /file:
+    post:
+      summary: "Upload a file"
+      description: "Uploads a file and specifies limits on the amount of times it can be downloaded and when it will expire."
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                maxAllowedDownloads:
+                  type: integer
+                  example: 1337
+                  description: "Integer value representing the amount of times this file can be dowloaded. This value defaults to 1 if it is not specified."
+                expirationDateTime:
+                  type: string
+                  format: date-time
+                  example: "2017-07-21T17:32:28Z"
+                  description: "Date time value in RFC 3339 format that represents when the file will no longer be able to be downloaded.\n Example: \"2017-07-21T17:32:28Z\" \n Please see https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#rfc.section.5.6 for more information"
+                file:
+                  type: string
+                  format: binary
+                  description: "File in binary format"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    description: "The ID the file has been given, this is how the file will be identified for downloading purposes"
+                    example: "b082723c-5c7a-4c37-b44d-027ff6ebc23a"
+        422:
+          description: "Invalid expiration date format, please use RFC 3339 format."
+        default:
+          description: "Unexpected Error"
