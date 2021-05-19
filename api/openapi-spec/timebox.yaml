@@ -45,7 +45,7 @@ paths:
                 maxAllowedDownloads:
                   type: integer
                   example: 1337
-                  description: "Integer value representing the amount of times this file can be dowloaded. This value defaults to 1 if it is not specified."
+                  description: "Integer value representing the amount of times this file can be downloaded. This value defaults to 25 if it is not specified."
                 expirationDateTime:
                   type: string
                   format: date-time
@@ -68,7 +68,9 @@ paths:
                     format: uuid
                     description: "The ID the file has been given, this is how the file will be identified for downloading purposes"
                     example: "b082723c-5c7a-4c37-b44d-027ff6ebc23a"
-        422:
-          description: "Invalid expiration date format, please use RFC 3339 format."
+        400:
+          description: "Invalid request format, please check the body of your request. This is commonly caused by not using RFC 3339 format for the expirationDateTime field."
+        409:
+          description: "A resource with this filename already exists"
         default:
           description: "Unexpected Error"
