@@ -11,6 +11,7 @@ paths:
     get:
       summary: "Download a file"
       description: "Download a single file by it's Id"
+      operationId: downloadFile
       parameters:
         - in: path
           name: id
@@ -36,12 +37,18 @@ paths:
     post:
       summary: "Upload a file"
       description: "Uploads a file and specifies limits on the amount of times it can be downloaded and when it will expire."
+      operationId: uploadFile
       requestBody:
+        required: true
         content:
           multipart/form-data:
             schema:
               type: object
               properties:
+                name:
+                  type: string
+                  example: doge.jpeg
+                  description: "Name of the file"
                 maxAllowedDownloads:
                   type: integer
                   example: 1337
@@ -55,6 +62,11 @@ paths:
                   type: string
                   format: binary
                   description: "File in binary format"
+              required:
+                - name
+                - maxAllowedDownloads
+                - expirationDateTime
+                - file
       responses:
         200:
           description: OK
