@@ -75,10 +75,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
+                  key:
                     type: string
                     format: uuid
-                    description: "The ID the file has been given, this is how the file will be identified for downloading purposes"
+                    description: "The key of the file"
                     example: "b082723c-5c7a-4c37-b44d-027ff6ebc23a"
         400:
           description: "Invalid request format, please check the body of your request. This is commonly caused by not using RFC 3339 format for the expirationDateTime field."
