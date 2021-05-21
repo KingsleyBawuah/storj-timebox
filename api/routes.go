@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"encoding/json"
@@ -7,10 +7,18 @@ import (
 	"time"
 )
 
-const OneHundredMegabytes = 1 << 20 * 100
+const (
+	OneHundredMegabytes = 1 << 20 * 100
+	BucketName          = "timebox"
+	Retry               = 3 // Used to control retry threshold for failed uploads.
+)
 
 type UploadFileResponse struct {
 	Key string `json:"key"`
+}
+
+type DownloadFileResponse struct {
+	File []byte `json:"file"`
 }
 
 func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
