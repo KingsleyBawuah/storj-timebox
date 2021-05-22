@@ -1,14 +1,14 @@
-package main
+package internal
 
 import (
 	"context"
 	"io/ioutil"
 
-	_ "storj.io/uplink"
+	"storj.io/uplink"
 )
 
 // Downloads a file using Storj DCS
-func DownloadFile(ctx context.Context, key string) ([]byte, error) {
+func DownloadFile(ctx context.Context, sp *uplink.Project, key, bucketName string) ([]byte, error) {
 	// TODO: Look into if there is an extra benefit that the extra download options unlock, especially for larger files.
 	download, err := sp.DownloadObject(ctx, bucketName, key, nil)
 	if err != nil {

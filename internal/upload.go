@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 	"io"
 	"mime/multipart"
 
-	_ "storj.io/uplink"
+	"storj.io/uplink"
 )
 
 // Uploads a file, this is used for smaller files.
-func UploadFile(ctx context.Context, file multipart.File, fileKey string) error {
+func UploadFile(ctx context.Context, sp *uplink.Project, file multipart.File, fileKey, bucketName string) error {
 	// TODO: Set object info so the file expires based on the time passed in and custom metadata containing the download counter is set.
 	upload, err := sp.UploadObject(ctx, bucketName, fileKey, nil)
 	if err != nil {

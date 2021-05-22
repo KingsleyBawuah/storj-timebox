@@ -13,9 +13,11 @@ import (
 	"storj.io/uplink"
 )
 
-var sp *uplink.Project
-
-var bucketName string
+type server struct {
+	BucketName     string
+	storageProject *uplink.Project
+	Router         *chi.Mux
+}
 
 func initBucketStorage(ctx context.Context, accessGrant, bucketName string) *uplink.Project {
 	// Parse the Access Grant.
@@ -51,31 +53,26 @@ func envMust(varName string) string {
 	return value
 }
 
+func initService(ctx context.Context) *server {
+	return &server{
+		BucketName:     envMust("STORJ_BUCKET_NAME"),
+		storageProject: initBucketStorage(ctx, envMust("STORJ_ACCESS_GRANT"), envMust("STORJ_BUCKET_NAME")),
+		Router:         chi.NewRouter(),
+	}
+}
+
 func main() {
-	// TODO: What else can I do with this to help solve this problem?
 	ctx := context.Background()
 
-	bucketName = envMust("STORJ_BUCKET_NAME")
-
-	sp = initBucketStorage(ctx, envMust("STORJ_ACCESS_GRANT"), envMust("STORJ_BUCKET_NAME"))
-
 	// Set up http router and logger middleware.
-	r := chi.NewRouter()
-	// TODO: Handle this manually with a structured logging library.
-	r.Use(middleware.Logger)
-
-	// TODO: Handle routing better.
-	// Define routes with additional health check for monitoring.
-	r.Get("/health", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusOK)
-	})
-	r.Get("/file/{key}", DownloadFileHandler)
-	r.Post("/file", UploadFileHandler)
+	service := initService(ctx)
+	service.Router.Use(middleware.Logger)
+	service.routes()
 
 	port := envMust("PORT")
 
 	log.Println("Listening on port", port)
 
 	// Listen for requests.
-	_ = http.ListenAndServe(fmt.Sprintf(":%s", port), r)
+	_ = http.ListenAndServe(fmt.Sprintf(":%s", port), service.Router)
 }
