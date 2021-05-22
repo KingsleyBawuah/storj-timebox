@@ -66,7 +66,6 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func DownloadFileHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println(r)
 	// TODO: Can/Should I avoid declaring ctx in each handler?
 	ctx := context.Background()
 	// Get File ID
