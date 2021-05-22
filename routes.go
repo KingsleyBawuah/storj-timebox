@@ -20,6 +20,8 @@ type UploadFileResponse struct {
 }
 
 func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Should I be doing this?
+	ctx := context.Background()
 	// Assert request body exists
 	if r.Body == nil {
 		http.Error(w, "Error request body required", http.StatusBadRequest)
@@ -53,13 +55,16 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Determine which upload method is appropriate and begin uploading the file to the Storj DCS network.
 	if fh.Size < OneHundredMegabytes {
-		// internal.UploadFile()
+		if err := UploadFile(ctx, f, fh.Filename); err != nil {
+			// TODO: Populate error message.
+			w.WriteHeader(http.StatusBadRequest)
+		}
 	} else {
 		// MultipartUploadFile()
 	}
 
 	// Write out the response
-	res := &UploadFileResponse{Key: "b082723c-5c7a-4c37-b44d-027ff6ebc23a"}
+	res := &UploadFileResponse{Key: fh.Filename}
 	response, err := json.Marshal(res)
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(response)
