@@ -9,8 +9,6 @@ import (
 
 const (
 	OneHundredMegabytes = 1 << 20 * 100
-	BucketName          = "timebox"
-	Retry               = 3 // Used to control retry threshold for failed uploads.
 )
 
 type UploadFileResponse struct {
