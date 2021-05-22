@@ -4,10 +4,18 @@ info:
   version: "0.1"
   description: "A 'Time-box' API that allows users to upload/download files. \n Uploaded files can have limits specifying an expiration date and a limit on how many times they can be downloaded."
 servers:
-  - url: http://localhost:1337/v1
+  - url: http://localhost:3000
     description: "Base URL for local development"
 paths:
-  /file/{id}:
+  /health:
+    get:
+      summary: "Health Check"
+      description: "Endpoint for checking the health of the service."
+      operationId: health
+      responses:
+        200:
+          description: OK
+  /file/{key}:
     get:
       summary: "Download a file"
       description: "Download a single file by it's key"

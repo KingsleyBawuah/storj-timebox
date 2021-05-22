@@ -1,10 +1,14 @@
-package api
+package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 const (
@@ -13,10 +17,6 @@ const (
 
 type UploadFileResponse struct {
 	Key string `json:"key"`
-}
-
-type DownloadFileResponse struct {
-	File []byte `json:"file"`
 }
 
 func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +53,7 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Determine which upload method is appropriate and begin uploading the file to the Storj DCS network.
 	if fh.Size < OneHundredMegabytes {
-		// UploadFile()
+		// internal.UploadFile()
 	} else {
 		// MultipartUploadFile()
 	}
@@ -66,8 +66,21 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func DownloadFileHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println(r)
+	// TODO: Can/Should I avoid declaring ctx in each handler?
+	ctx := context.Background()
 	// Get File ID
-	key := r.URL.Query().Get("key")
-	log.Println("Id supplied", key)
-	_, _ = w.Write([]byte("Download Called"))
+	key := chi.URLParam(r, "key")
+	log.Printf("Download of file %s requested \n", key)
+
+	file, err := DownloadFile(ctx, key)
+	if err != nil {
+		log.Println("error downloading file", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	w.Header().Set("Content-Length", r.Header.Get("Content-Length"))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", key))
+	_, _ = w.Write(file)
 }

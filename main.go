@@ -8,36 +8,36 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/KingsleyBawuah/storj-timebox/api"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"storj.io/uplink"
 )
 
-type storjProject *uplink.Project
+var sp *uplink.Project
 
-func initBucketStorage(ctx context.Context, ag, bn string) (*uplink.Project, error) {
+var bucketName string
+
+func initBucketStorage(ctx context.Context, accessGrant, bucketName string) *uplink.Project {
 	// Parse the Access Grant.
-	access, err := uplink.ParseAccess(ag)
+	access, err := uplink.ParseAccess(accessGrant)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse access grant: %v", err)
+		log.Fatalf("could not parse access grant: %s", err.Error())
 	}
 
 	// Open up the Project we will be working with.
 	project, err := uplink.OpenProject(ctx, access)
 	if err != nil {
-		return nil, fmt.Errorf("could not open project: %v", err)
+		log.Fatalf("could not open project: %s", err.Error())
 	}
 	defer project.Close()
 
 	// Ensure the desired Bucket within the Project is created.
-	_, err = project.EnsureBucket(ctx, bn)
+	_, err = project.EnsureBucket(ctx, bucketName)
 	if err != nil {
-		return nil, fmt.Errorf("could not ensure bucket: %v", err)
+		log.Fatalf("could not ensure bucket: %s", err.Error())
 	}
 
-	return project, nil
+	return project
 }
 
 // fetches and returns the given env variable, fatals and
@@ -52,18 +52,30 @@ func envMust(varName string) string {
 }
 
 func main() {
+	// TODO: What else can I do with this to help solve this problem?
+	ctx := context.Background()
+
+	bucketName = envMust("STORJ_BUCKET_NAME")
+
+	sp = initBucketStorage(ctx, envMust("STORJ_ACCESS_GRANT"), envMust("STORJ_BUCKET_NAME"))
+
 	// Set up http router and logger middleware.
 	r := chi.NewRouter()
 	// TODO: Handle this manually with a structured logging library.
 	r.Use(middleware.Logger)
 
 	// TODO: Handle routing better.
-	// Define routes.
-	r.Get("/v1/file", api.DownloadFileHandler)
-	r.Post("/v1/file", api.UploadFileHandler)
+	// Define routes with additional health check for monitoring.
+	r.Get("/health", func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+	})
+	r.Get("/file/{key}", DownloadFileHandler)
+	r.Post("/file", UploadFileHandler)
 
-	log.Println("Listening on port 8080")
+	port := envMust("PORT")
+
+	log.Println("Listening on port", port)
 
 	// Listen for requests.
-	_ = http.ListenAndServe(":8080", r)
+	_ = http.ListenAndServe(fmt.Sprintf(":%s", port), r)
 }
