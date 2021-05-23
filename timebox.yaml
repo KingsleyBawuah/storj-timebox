@@ -24,7 +24,14 @@ paths:
         - in: path
           name: key
           description: "key of the file to download"
-          example: "cute-puppies.gif"
+          examples:
+            single:
+              value: "cute-puppies.gif"
+              summary: "Uploading a single file to the shared root folder"
+            nested:
+              value: "happiness/cute-puppies.gif"
+              summary: "Uploading a single file to a nested folder."
+              description: "Uploading files to a nested folder is supported. All files are uploaded to a shared root bucket"
           schema:
             type: string
             format: uuid
@@ -53,15 +60,11 @@ paths:
             schema:
               type: object
               properties:
-                name:
-                  type: string
-                  example: doge.jpeg
-                  description: "Name of the file"
-                maxAllowedDownloads:
+                maxDownloads:
                   type: integer
                   example: 1337
                   description: "Integer value representing the amount of times this file can be downloaded. This value defaults to 25 if it is not specified."
-                expirationDateTime:
+                expires:
                   type: string
                   format: date-time
                   example: "2017-07-21T17:32:28Z"
@@ -71,9 +74,8 @@ paths:
                   format: binary
                   description: "File in binary format"
               required:
-                - name
-                - maxAllowedDownloads
-                - expirationDateTime
+                - maxDownloads
+                - expires
                 - file
       responses:
         200:
@@ -85,7 +87,7 @@ paths:
                 properties:
                   key:
                     type: string
-                    description: "The key of the file"
+                    description: "The key of the file, downloading from a nested folder is supported."
                     example: "cute-kitties.gif"
         400:
           description: "Invalid request format, please check the body of your request. This is commonly caused by not using RFC 3339 format for the expirationDateTime field."

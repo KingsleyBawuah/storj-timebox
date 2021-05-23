@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/KingsleyBawuah/storj-timebox/internal"
@@ -40,17 +41,16 @@ func (s *server) UploadFileHandler() http.HandlerFunc {
 		r.Body = http.MaxBytesReader(w, r.Body, 32<<20+512)
 
 		// Read the expected data about the file.
-		name := r.FormValue("name")
-		maxAllowedDownloads := r.FormValue("maxAllowedDownloads")
-		expirationDateTimeStr := r.FormValue("expirationDateTime")
+		maxAllowedDownloads := r.FormValue("maxDownloads")
+		expirationDateTimeStr := r.FormValue("expires")
 
 		// Assert body fields exist.
-		if name == "" || maxAllowedDownloads == "" || expirationDateTimeStr == "" {
+		if maxAllowedDownloads == "" || expirationDateTimeStr == "" {
 			http.Error(w, "Error, all request body fields required", http.StatusBadRequest)
 		}
 
 		// Parse the time to validate it.
-		_, err := time.Parse(time.RFC3339, expirationDateTimeStr)
+		expires, err := time.Parse(time.RFC3339, expirationDateTimeStr)
 		if err != nil {
 			http.Error(w, "Error parsing expirationDateTime, please use RFC3339 date-time", http.StatusBadRequest)
 		}
@@ -62,9 +62,14 @@ func (s *server) UploadFileHandler() http.HandlerFunc {
 		}
 		defer f.Close()
 
+		mdc, err := strconv.Atoi(maxAllowedDownloads)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+
 		// Determine which upload method is appropriate and begin uploading the file to the Storj DCS network.
 		if fh.Size < OneHundredMegabytes {
-			if err := internal.UploadFile(ctx, s.storageProject, f, fh.Filename, s.BucketName); err != nil {
+			if err := internal.UploadFile(ctx, s.storageProject, f, fh.Filename, s.BucketName, mdc, expires); err != nil {
 				// TODO: Populate error message.
 				w.WriteHeader(http.StatusBadRequest)
 			}
@@ -88,6 +93,7 @@ func (s *server) DownloadFileHandler() http.HandlerFunc {
 		key := chi.URLParam(r, "key")
 		log.Printf("Download of file %s requested \n", key)
 
+		// TODO: Return a reader so that I can use io.Copy to copy straight into the response buffer.
 		file, err := internal.DownloadFile(ctx, s.storageProject, key, s.BucketName)
 		if err != nil {
 			log.Println("error downloading file", err.Error())

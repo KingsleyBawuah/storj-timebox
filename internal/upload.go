@@ -4,17 +4,29 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
+	"strconv"
+	"time"
 
 	"storj.io/uplink"
 )
 
-// Uploads a file, this is used for smaller files.
-func UploadFile(ctx context.Context, sp *uplink.Project, file multipart.File, fileKey, bucketName string) error {
-	// TODO: Set object info so the file expires based on the time passed in and custom metadata containing the download counter is set.
-	upload, err := sp.UploadObject(ctx, bucketName, fileKey, nil)
+// Uploads a file, this is used for smaller files (under 100mb)
+func UploadFile(ctx context.Context, sp *uplink.Project, file multipart.File, fileKey, bucketName string, maxDownloads int, expires time.Time) error {
+	log.Println("maxDownloads", maxDownloads)
+	upload, err := sp.UploadObject(ctx, bucketName, fileKey, &uplink.UploadOptions{
+		Expires: expires,
+	})
 	if err != nil {
 		return fmt.Errorf("could not initiate upload: %v", err)
+	}
+
+	err = upload.SetCustomMetadata(ctx, uplink.CustomMetadata{
+		downLoadLimitKey: strconv.Itoa(maxDownloads),
+	})
+	if err != nil {
+		return fmt.Errorf("could not set metadata on uploaded file %v", err)
 	}
 
 	// Copy the data to the upload.
@@ -33,6 +45,6 @@ func UploadFile(ctx context.Context, sp *uplink.Project, file multipart.File, fi
 	return nil
 }
 
-// Uploads a single file, this is for larger files that need to be uploaded in a more efficient fashion.
+// Uploads a single file, this is for larger files (over 100mb) that need to be uploaded in a more efficient fashion.
 func MultipartUploadFile(file multipart.File) {
 }
