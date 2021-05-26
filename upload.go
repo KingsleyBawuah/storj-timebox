@@ -1,4 +1,4 @@
-package internal
+package main
 
 import (
 	"context"
@@ -6,15 +6,26 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"storj.io/uplink"
 )
 
 // Uploads a file, this is used for smaller files (under 100mb)
-func UploadFile(ctx context.Context, sp *uplink.Project, file multipart.File, fileKey, bucketName string, maxDownloads int, expires time.Time) error {
+func UploadFile(ctx context.Context, sp *uplink.Project, DB *server, file multipart.File, fileKey, bucketName string, maxDownloads int, expires time.Time) error {
 	log.Println("maxDownloads", maxDownloads)
+	// Prevent file name collisions.
+	_, err := fetchFileObj(ctx, sp, fileKey, bucketName)
+	if err != nil {
+		// TODO: Not the biggest fan of relying on this string. If Storj changed the error message this would stop working
+		if !strings.Contains(err.Error(), "object not found") {
+			return err
+		}
+	}
+
 	upload, err := sp.UploadObject(ctx, bucketName, fileKey, &uplink.UploadOptions{
 		Expires: expires,
 	})
@@ -40,6 +51,12 @@ func UploadFile(ctx context.Context, sp *uplink.Project, file multipart.File, fi
 	err = upload.Commit()
 	if err != nil {
 		return fmt.Errorf("could not commit uploaded object: %v", err)
+	}
+
+	// Create the download limit counter.
+	err = DB.CreateDownloadCount(fileKey, os.Getenv("DYNAMO_DB_TABLE_NAME"))
+	if err != nil {
+		return fmt.Errorf("could not create download count in db: %v", err)
 	}
 
 	return nil

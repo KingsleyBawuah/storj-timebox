@@ -1,4 +1,4 @@
-package internal
+package main
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 
 	"storj.io/uplink"
@@ -18,7 +19,7 @@ const (
 // Fetch information about the file from storjDCS
 func fetchFileObj(ctx context.Context, sp *uplink.Project, key, bucketName string) (*uplink.Object, error) {
 	obj, err := sp.StatObject(ctx, bucketName, key)
-	if err != nil || obj == nil {
+	if err != nil {
 		return nil, fmt.Errorf("there is an issue fetching the file %v", err)
 	}
 
@@ -48,12 +49,13 @@ func validateDownload(fileObj *uplink.Object, downloadCount int) bool {
 }
 
 // Downloads a file using Storj DCS
-func DownloadFile(ctx context.Context, sp *uplink.Project, key, bucketName string) ([]byte, error) {
+func DownloadFile(ctx context.Context, sp *uplink.Project, s *server, key, bucketName string) ([]byte, error) {
 	obj, err := fetchFileObj(ctx, sp, key, bucketName)
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO: Remove the if, send that we can't find the file somehow.
 	if obj != nil {
 		log.Printf("File exists!!!!, here's some metadata %+v\\n", obj.Custom)
 		// TODO: Look into if there is an extra benefit that the extra download options unlock, especially for larger files.
@@ -62,8 +64,13 @@ func DownloadFile(ctx context.Context, sp *uplink.Project, key, bucketName strin
 			return nil, err
 		}
 
+		count, err := s.GetDownloadCount(key, os.Getenv("DYNAMO_DB_TABLE_NAME"))
+		if err != nil {
+			return nil, err
+		}
+
 		// TODO: Read files row in dynamodb for count.
-		if validateDownload(obj, 2) {
+		if validateDownload(obj, count) {
 			// Read everything from the download stream
 			// TODO: Don't read the entire file into memory like this.
 			receivedContents, err := ioutil.ReadAll(download)

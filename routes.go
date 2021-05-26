@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
-	"github.com/KingsleyBawuah/storj-timebox/internal"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -69,9 +69,10 @@ func (s *server) UploadFileHandler() http.HandlerFunc {
 
 		// Determine which upload method is appropriate and begin uploading the file to the Storj DCS network.
 		if fh.Size < OneHundredMegabytes {
-			if err := internal.UploadFile(ctx, s.storageProject, f, fh.Filename, s.BucketName, mdc, expires); err != nil {
+			if err := UploadFile(ctx, s.storageProject, s, f, fh.Filename, s.BucketName, mdc, expires); err != nil {
 				// TODO: Populate error message.
 				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(err.Error()))
 			}
 		} else {
 			// MultipartUploadFile()
@@ -81,7 +82,7 @@ func (s *server) UploadFileHandler() http.HandlerFunc {
 		res := &UploadFileResponse{Key: fh.Filename}
 		response, err := json.Marshal(res)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(response)
+		_, _ = w.Write(response) // TODO: Deal with the error message success body sandwhich
 	}
 }
 
@@ -94,10 +95,17 @@ func (s *server) DownloadFileHandler() http.HandlerFunc {
 		log.Printf("Download of file %s requested \n", key)
 
 		// TODO: Return a reader so that I can use io.Copy to copy straight into the response buffer.
-		file, err := internal.DownloadFile(ctx, s.storageProject, key, s.BucketName)
+		file, err := DownloadFile(ctx, s.storageProject, s, key, s.BucketName)
 		if err != nil {
-			log.Println("error downloading file", err.Error())
 			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("error downloading file" + err.Error()))
+		}
+
+		err = s.IncrementDownloadCount(key, os.Getenv("DYNAMO_DB_TABLE_NAME"))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("error incrementing download counter" + err.Error()))
+
 		}
 
 		w.Header().Set("Content-Length", r.Header.Get("Content-Length"))
