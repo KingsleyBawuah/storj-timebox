@@ -98,14 +98,15 @@ func (s *server) DownloadFileHandler() http.HandlerFunc {
 		file, err := DownloadFile(ctx, s.storageProject, s, key, s.BucketName)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("error downloading file" + err.Error()))
+			w.Write([]byte("error downloading file: " + err.Error()))
+			return
 		}
 
 		err = s.IncrementDownloadCount(key, os.Getenv("DYNAMO_DB_TABLE_NAME"))
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("error incrementing download counter" + err.Error()))
-
+			w.Write([]byte("error incrementing download counter: " + err.Error()))
+			return
 		}
 
 		w.Header().Set("Content-Length", r.Header.Get("Content-Length"))

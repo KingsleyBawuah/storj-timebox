@@ -58,11 +58,6 @@ func DownloadFile(ctx context.Context, sp *uplink.Project, s *server, key, bucke
 	// TODO: Remove the if, send that we can't find the file somehow.
 	if obj != nil {
 		log.Printf("File exists!!!!, here's some metadata %+v\\n", obj.Custom)
-		// TODO: Look into if there is an extra benefit that the extra download options unlock, especially for larger files.
-		download, err := sp.DownloadObject(ctx, bucketName, key, nil)
-		if err != nil {
-			return nil, err
-		}
 
 		count, err := s.GetDownloadCount(key, os.Getenv("DYNAMO_DB_TABLE_NAME"))
 		if err != nil {
@@ -71,6 +66,11 @@ func DownloadFile(ctx context.Context, sp *uplink.Project, s *server, key, bucke
 
 		// TODO: Read files row in dynamodb for count.
 		if validateDownload(obj, count) {
+			// TODO: Look into if there is an extra benefit that the extra download options unlock, especially for larger files.
+			download, err := sp.DownloadObject(ctx, bucketName, key, nil)
+			if err != nil {
+				return nil, err
+			}
 			// Read everything from the download stream
 			// TODO: Don't read the entire file into memory like this.
 			receivedContents, err := ioutil.ReadAll(download)
@@ -79,7 +79,7 @@ func DownloadFile(ctx context.Context, sp *uplink.Project, s *server, key, bucke
 			}
 			return receivedContents, nil
 		} else {
-			return nil, errors.New("can't download file")
+			return nil, errors.New("can't download file, limit reached")
 		}
 	} else {
 		return nil, errors.New("file not found")
