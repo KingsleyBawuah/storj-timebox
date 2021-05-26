@@ -118,9 +118,6 @@ func (s *server) IncrementDownloadCount(key, tableName string) error {
 	// TODO: This is creating duplicate values somehow.
 	newCount, err := s.DB.UpdateItem(&dynamodb.UpdateItemInput{
 		ConditionExpression: nil,
-		// ExpressionAttributeNames: map[string]*string{
-		// 	"#d": aws.String(downloadCount),
-		// },
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":inc": {
 				N: aws.String("1"),
